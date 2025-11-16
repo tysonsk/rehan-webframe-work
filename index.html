@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      min-height: 100vh;
+    }
+
+    /* Mobile Header */
+    .mobile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+    }
+
+    .mobile-header h1 {
+      font-size: 1.25rem;
+      color: #1f2937;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      color: #374151;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      color: #2563eb;
+      background: #eff6ff;
+    }
+
+    .notification-badge {
+      position: relative;
+    }
+
+    .notification-badge::after {
+      content: '3';
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: #ef4444;
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Overlay */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 40;
+      display: none;
+    }
+
+    .overlay.active {
+      display: block;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 16rem;
+      background: linear-gradient(to bottom, #2563eb, #1e40af);
+      color: white;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .sidebar-header h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .sidebar-header p {
+      font-size: 0.875rem;
+      color: #bfdbfe;
+    }
+
+    .sidebar-nav {
+      padding: 1rem;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      color: #bfdbfe;
+      text-decoration: none;
+      margin-bottom: 0.5rem;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .nav-item:hover {
+      background: #1e40af;
+      color: white;
+    }
+
+    .nav-item.active {
+      background: white;
+      color: #2563eb;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .sidebar-footer {
+      padding: 1rem;
+      border-top: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+    }
+
+    .user-avatar {
+      width: 2.5rem;
+      height: 2.5rem;
+      background: #60a5fa;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .user-info p {
+      font-size: 0.875rem;
+    }
+
+    .user-info small {
+      font-size: 0.75rem;
+      color: #bfdbfe;
+    }
+
+    /* Main Content */
+    .main-content {
+      margin-top: 4rem;
+      transition: margin-left 0.3s;
+    }
+
+    .desktop-header {
+      display: none;
+      background: white;
+      padding: 1.5rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .desktop-header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .search-bar {
+      flex: 1;
+      max-width: 36rem;
+      position: relative;
+    }
+
+    .search-bar input {
+      width: 100%;
+      padding: 0.5rem 1rem 0.5rem 2.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .search-bar input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-left: 1rem;
+    }
+
+    .content {
+      padding: 1.5rem;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .stat-card:hover {
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .stat-label {
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 1.875rem;
+      font-weight: bold;
+      color: #1f2937;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-change {
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .stat-change.positive {
+      color: #16a34a;
+    }
+
+    .stat-change.negative {
+      color: #dc2626;
+    }
+
+    /* Content Grid */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .card h3 {
+      font-size: 1.25rem;
+      color: #1f2937;
+      margin-bottom: 1rem;
+    }
+
+    .activity-item {
+      display: flex;
+      gap: 1rem;
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .activity-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+
+    .activity-avatar {
+      width: 2.5rem;
+      height: 2.5rem;
+      background: linear-gradient(135deg, #60a5fa, #2563eb);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .activity-details {
+      flex: 1;
+    }
+
+    .activity-details p {
+      color: #1f2937;
+      margin-bottom: 0.25rem;
+    }
+
+    .activity-details .user-name {
+      font-weight: 600;
+    }
+
+    .activity-details small {
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+
+    .quick-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+
+    .action-btn.blue {
+      background: #eff6ff;
+      color: #1e40af;
+    }
+
+    .action-btn.blue:hover {
+      background: #dbeafe;
+    }
+
+    .action-btn.green {
+      background: #f0fdf4;
+      color: #15803d;
+    }
+
+    .action-btn.green:hover {
+      background: #dcfce7;
+    }
+
+    .action-btn.purple {
+      background: #faf5ff;
+      color: #7e22ce;
+    }
+
+    .action-btn.purple:hover {
+      background: #f3e8ff;
+    }
+
+    .action-btn.gray {
+      background: #f9fafb;
+      color: #374151;
+    }
+
+    .action-btn.gray:hover {
+      background: #f3f4f6;
+    }
+
+    .performance-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .chart-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 1rem;
+    }
+
+    .chart-placeholder {
+      height: 8rem;
+      background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+      border-radius: 0.5rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #2563eb;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .chart-placeholder:hover {
+      transform: scale(1.02);
+    }
+
+    .chart-card h4 {
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 0.5rem;
+    }
+
+    .chart-card p {
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+
+    /* Responsive */
+    @media (min-width: 640px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .performance-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .mobile-header {
+        display: none;
+      }
+
+      .sidebar {
+        transform: translateX(0);
+      }
+
+      .main-content {
+        margin-left: 16rem;
+        margin-top: 0;
+      }
+
+      .desktop-header {
+        display: block;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .content-grid {
+        grid-template-columns: 2fr 1fr;
+      }
+
+      .performance-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Mobile Header -->
+  <header class="mobile-header">
+    <button class="icon-btn" id="menuBtn" aria-label="Toggle menu">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <h1>Dashboard</h1>
+    <button class="icon-btn notification-badge" id="notificationBtn">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+      </svg>
+    </button>
+  </header>
+
+  <!-- Overlay -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>MyApp</h2>
+      <p>Admin Portal</p>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-page="users">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        <span>Users</span>
+      </a>
+      <a href="#" class="nav-item" data-page="analytics">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="20" x2="12" y2="10"></line>
+          <line x1="18" y1="20" x2="18" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="16"></line>
+        </svg>
+        <span>Analytics</span>
+      </a>
+      <a href="#" class="nav-item" data-page="reports">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        <span>Reports</span>
+      </a>
+      <a href="#" class="nav-item" data-page="settings">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 1v6m0 6v6m-9-9h6m6 0h6"></path>
+        </svg>
+        <span>Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-profile">
+        <div class="user-avatar">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div class="user-info">
+          <p>John Doe</p>
+          <small>Admin</small>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Desktop Header -->
+    <header class="desktop-header">
+      <div class="desktop-header-content">
+        <div class="search-bar">
+          <span class="search-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+          </span>
+          <input type="text" placeholder="Search..." id="searchInput">
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn notification-badge">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+          </button>
+          <div class="user-avatar" style="background: #2563eb;">
+            <svg width="20" height="20" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card" data-stat="users">
+          <p class="stat-label">Total Users</p>
+          <h3 class="stat-value">1,234</h3>
+          <span class="stat-change positive">+12% from last month</span>
+        </div>
+        <div class="stat-card" data-stat="revenue">
+          <p class="stat-label">Revenue</p>
+          <h3 class="stat-value">$45,678</h3>
+          <span class="stat-change positive">+8% from last month</span>
+        </div>
+        <div class="stat-card" data-stat="sessions">
+          <p class="stat-label">Active Sessions</p>
+          <h3 class="stat-value">456</h3>
+          <span class="stat-change positive">+5% from last month</span>
+        </div>
+        <div class="stat-card" data-stat="conversion">
+          <p class="stat-label">Conversion Rate</p>
+          <h3 class="stat-value">3.2%</h3>
+          <span class="stat-change negative">-2% from last month</span>
+        </div>
+      </div>
+
+      <!-- Content Grid -->
+      <div class="content-grid">
+        <!-- Recent Activity -->
+        <div class="card">
+          <h3>Recent Activity</h3>
+          <div>
+            <div class="activity-item">
+              <div class="activity-avatar">A</div>
+              <div class="activity-details">
+                <p><span class="user-name">Alice Johnson</span> created a new report</p>
+                <small>2 hours ago</small>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-avatar">B</div>
+              <div class="activity-details">
+                <p><span class="user-name">Bob Smith</span> updated user settings</p>
+                <small>4 hours ago</small>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-avatar">C</div>
+              <div class="activity-details">
+                <p><span class="user-name">Carol White</span> uploaded 3 files</p>
+                <small>5 hours ago</small>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-avatar">D</div>
+              <div class="activity-details">
+                <p><span class="user-name">David Brown</span> completed a task</p>
+                <small>1 day ago</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+          <h3>Quick Actions</h3>
+          <div class="quick-actions">
+            <button class="action-btn blue" data-action="add-user">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              <span>Add New User</span>
+            </button>
+            <button class="action-btn green" data-action="generate-report">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              <span>Generate Report</span>
+            </button>
+            <button class="action-btn purple" data-action="view-analytics">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="20" x2="12" y2="10"></line>
+                <line x1="18" y1="20" x2="18" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="16"></line>
+              </svg>
+              <span>View Analytics</span>
+            </button>
+            <button class="action-btn gray" data-action="system-settings">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v6m0 6v6m-9-9h6m6 0h6"></path>
+              </svg>
+              <span>System Settings</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance Overview -->
+      <div class="card performance-grid">
+        <h3 style="grid-column: 1 / -1;">Performance Overview</h3>
+        <div class="chart-card" data-chart="1">
+          <div class="chart-placeholder">
+            <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="20" x2="12" y2="10"></line>
+              <line x1="18" y1="20" x2="18" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="16"></line>
+            </svg>
+          </div>
+          <h4>Chart 1</h4>
+          <p>Performance metrics and analytics data visualization placeholder.</p>
+        </div>
+        <div class="chart-card" data-chart="2">
+          <div class="chart-placeholder">
+            <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="20" x2="12" y2="10"></line>
+              <line x1="18" y1="20" x2="18" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="16"></line>
+            </svg>
+          </div>
+          <h4>Chart 2</h4>
+          <p>Performance metrics and analytics data visualization placeholder.</p>
+        </div>
+        <div class="chart-card" data-chart="3">
+          <div class="chart-placeholder">
+            <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="20" x2="12" y2="10"></line>
+              <line x1="18" y1="20" x2="18" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="16"></line>
+            </svg>
+          </div>
+          <h4>Chart 3</h4>
+          <p>Performance metrics and analytics data visualization placeholder.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Menu toggle
+    const menuBtn = document.getElementById('menuBtn');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+
+    function toggleMenu() {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('active');
+    }
+
+    menuBtn.addEventListener('click', toggleMenu);
+    overlay.addEventListener('click', toggleMenu);
+
+    // Navigation
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        navItems.forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+        const page = item.dataset.page;
+        console.log(`Navigating to: ${page}`);
+        alert(`Navigating to ${page.charAt(0).toUpperCase() + page.slice(1)} page`);
+        
+        // Close mobile menu
+        if (window.innerWidth < 1024) {
+          toggleMenu();
+        }
+      });
+    });
+
+    // Stat cards
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const stat = card.dataset.stat;
+        console.log(`Clicked stat: ${stat}`);
+        alert(`Viewing detailed ${stat} statistics`);
+      });
+    });
+
+    // Quick actions
+    const actionBtns = document.querySelectorAll('.action-btn');
+    actionBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        console.log(`Action: ${action}`);
+        alert(`Executing action: ${action.replace(/-/g, ' ')}`);
+      });
+    });
+
+    // Charts
+    const charts = document.querySelectorAll('.chart-card');
+    charts.forEach(chart => {
+      chart.addEventListener('click', () => {
+        const chartNum = chart.dataset.chart;
+        console.log(`Clicked chart: ${chartNum}`);
+        alert(`Opening Chart ${chartNum} in full view`);
+      });
+    });
+
+    // Notification button
+    const notificationBtns = document.querySelectorAll('.notification-badge');
+    notificationBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        console.log('Notifications clicked');
+        alert('You have 3 new notifications:\n\n1. New user registration\n2. System update available\n3. Monthly report ready');
+      });
+    });
+
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          const query = searchInput.value;
+          if (query.trim()) {
+            console.log(`Searching for: ${query}`);
+            alert(`Searching for: "${query}"`);
+            searchInput.value = '';
+          }
+        }
+      });
+    }
+
+    // Activity items
+    const activityItems = document.querySelectorAll('.activity-item');
+    activityItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const userName = item.querySelector('.user-name').textContent;
+        console.log(`Clicked activity by: ${userName}`);
+        alert(`View full activity details for ${userName}`);
+      });
+      item.style.cursor = 'pointer';
+    });
+
+    // User profile
+    const userProfiles = document.querySelectorAll('.user-profile, .user-avatar');
+    userProfiles.forEach(profile => {
+      profile.addEventListener('click', () => {
+        console.log('User profile clicked');
+        alert('User Profile:\n\nName: John Doe\nRole: Admin\nEmail: john.doe@myapp.com\nLast login: Today at 9:30 AM');
+      });
+      profile.style.cursor = 'pointer';
+    });
+
+    console.log('Dashboard loaded successfully! All interactive elements are ready.');
+  </script>
+</body>
+</html>
